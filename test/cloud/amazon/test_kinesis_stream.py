@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import boto
 import boto3
 import unittest
 
@@ -11,7 +10,7 @@ from ansible.inventory import Inventory
 from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 
-import kinesis_stream
+import cloud.amazon.kinesis_stream as kinesis_stream
 
 Options = (
     namedtuple(
