@@ -38,6 +38,8 @@ options = (
 )
 passwords = dict(vault_pass='')
 
+aws_region = 'us-west-2'
+
 # create inventory and pass to var manager
 inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list='localhost')
 variable_manager.set_inventory(inventory)
@@ -74,7 +76,8 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                         args=dict(
                             name='stream-test',
                             shards=10,
-                            wait='yes'
+                            wait='yes',
+                            region=aws_region,
                         )
                     ),
                     register='stream',
@@ -94,12 +97,15 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        shards=10,
-                        tags=dict(
-                            env='development'
-                        ),
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            region=aws_region,
+                            shards=10,
+                            tags=dict(
+                                env='development'
+                            ),
+                            wait='yes'
+                        )
                     ),
                     register='stream'
                 )
@@ -118,13 +124,16 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        retention_period=48,
-                        shards=10,
-                        tags=dict(
-                            env='development'
-                        ),
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            retention_period=48,
+                            region=aws_region,
+                            shards=10,
+                            tags=dict(
+                                env='development'
+                            ),
+                            wait='yes'
+                        )
                     ),
                     register='stream'
                 )
@@ -143,8 +152,11 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            region=aws_region,
+                            wait='yes'
+                        )
                     ),
                     register='stream'
                 )
@@ -163,10 +175,13 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        retention_period=23,
-                        shards=10,
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            region=aws_region,
+                            retention_period=23,
+                            shards=10,
+                            wait='yes'
+                        )
                     ),
                     register='stream'
                 )
@@ -185,9 +200,12 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        state='absent',
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            region=aws_region,
+                            state='absent',
+                            wait='yes'
+                        )
                     )
                 )
             ]
