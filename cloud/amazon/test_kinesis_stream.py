@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import boto
+import boto3
 import unittest
 
 from collections import namedtuple
@@ -10,7 +12,6 @@ from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 
 import kinesis_stream
-import boto3
 
 Options = (
     namedtuple(
@@ -28,7 +29,7 @@ loader = DataLoader()
 options = (
     Options(
         connection='local',
-        module_path='./',
+        module_path='cloud/amazon',
         forks=1, become=None, become_method=None, become_user=None, check=True,
         remote_user=None, private_key_file=None, ssh_common_args=None,
         sftp_extra_args=None, scp_extra_args=None, ssh_extra_args=None,
@@ -54,8 +55,6 @@ def run(play):
                 stdout_callback='default',
             )
         results = tqm.run(play)
-        print results
-        print tqm._stats.__dict__
     finally:
         if tqm is not None:
             tqm.cleanup()
@@ -72,11 +71,13 @@ class AnsibleKinesisStreamTasks(unittest.TestCase):
                 dict(
                     action=dict(
                         module='kinesis_stream',
-                        name='stream-test',
-                        shards=10,
-                        wait='yes'
+                        args=dict(
+                            name='stream-test',
+                            shards=10,
+                            wait='yes'
+                        )
                     ),
-                    register='stream'
+                    register='stream',
                 )
             ]
         )
