@@ -14,4 +14,4 @@ install:
   - pip install git+https://github.com/sivel/ansible-testing.git#egg=ansible_testing
 script:
   - python2.7 -m compileall -fq .
-  - ansible-validate-modules --exclude 'test*'
+  - ansible-validate-modules --exclude 'test*' ./
