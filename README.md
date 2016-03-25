@@ -2,6 +2,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/linuxdynasty/ld-ansible-modules/badge.svg?branch=master)](https://coveralls.io/github/linuxdynasty/ld-ansible-modules?branch=master)
 
 # Ansible Version
+
+[![Join the chat at https://gitter.im/linuxdynasty/ld-ansible-modules](https://badges.gitter.im/linuxdynasty/ld-ansible-modules.svg)](https://gitter.im/linuxdynasty/ld-ansible-modules?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 * These modules are tested against the latest Ansible, unless otherwise specified.
 
 # Guidelines
