@@ -1,4 +1,8 @@
 [![Build Status](https://travis-ci.org/linuxdynasty/ld-ansible-modules.svg?branch=master)](https://travis-ci.org/linuxdynasty/ld-ansible-modules)
+
+# Ansible Version
+* These modules are tested against the latest Ansible, unless otherwise specified.
+
 # Guidelines
 **Any modules that I write and submit to https://github.com/ansible/ansible-modules-extras will also be in this repository.**
 
