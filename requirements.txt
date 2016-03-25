@@ -1,0 +1,4 @@
+boto==2.39.0
+boto3==1.3.0
+botocore==1.4.7
+pytest==2.9.1
