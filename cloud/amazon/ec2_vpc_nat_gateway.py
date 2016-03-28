@@ -209,8 +209,10 @@ try:
 except ImportError:
     HAS_BOTO3 = False
 
-import time
 import datetime
+import random
+import time
+
 from dateutil.tz import tzutc
 
 DRY_RUN_GATEWAYS = [
@@ -247,6 +249,16 @@ DRY_RUN_GATEWAY_UNCONVERTED = [
         'CreateTime': datetime.datetime(2016, 3, 5, 5, 19, 20, 282000, tzinfo=tzutc())
     }
 ]
+
+DRY_RUN_ALLOCATION_UNCONVERTED = {
+    'Addresses': [
+        {
+            'PublicIp': '55.55.55.55',
+            'Domain': 'vpc',
+            'AllocationId': 'eipalloc-1234567'
+        }
+    ]
+}
 
 DRY_RUN_MSGS = 'DryRun Mode:'
 
@@ -424,6 +436,14 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                     err_msg = nat_gateway.get('failure_message')
                     break
 
+                elif nat_gateway.get('state') == 'pending':
+                    if nat_gateway.has_key('FailureMessage'):
+                        err_msg = nat_gateway.get('FailureMessage')
+                        status_achieved = False
+                        break
+                    else:
+                        continue
+
             else:
                 time.sleep(polling_increment_secs)
 
@@ -518,9 +538,6 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
     }
     allocation_id = None
     err_msg = ""
-    if check_mode:
-        err_msg = '{0} Get EIP Address by allocation id'.format(DRY_RUN_MSGS)
-        return "eipalloc-1234567", err_msg
     try:
         if not check_mode:
             allocations = client.describe_addresses(**params)['Addresses']
@@ -529,17 +546,25 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
             else:
                 allocation = None
         else:
-            dry_run alloid = (
-                DRY_RUN_GATEWAYS[0]['nat_gateway_addresses'][0]['allocation_id']
+            dry_run_eip = (
+                DRY_RUN_ALLOCATION_UNCONVERTED['Addresses'][0]['PublicIp']
             )
-            if dry_run alloid == eip_address:
-                allocation DRY_RUN_GATEWAYS[0]
-        if not allocation.get('Domain') != 'vpc':
-            err_msg = (
-                "EIP provided is a non-VPC EIP, please allocate a VPC scoped EIP"
-            )
+            if dry_run_eip == eip_address:
+                allocation = DRY_RUN_ALLOCATION_UNCONVERTED['Addresses'][0]
+            else:
+				allocation = None
+        if allocation:
+            if allocation.get('Domain') != 'vpc':
+                err_msg = (
+                    "EIP {0} is a non-VPC EIP, please allocate a VPC scoped EIP"
+                    .format(eip_address)
+                )
+            else:
+                allocation_id = allocation.get('AllocationId')
         else:
-            allocation_id = allocation.get('AllocationId')
+            err_msg = (
+                "EIP {0} does not exist".format(eip_address)
+            )
 
     except botocore.exceptions.ClientError, e:
             err_msg = str(e)
@@ -571,7 +596,10 @@ def allocate_eip_address(client, check_mode=False):
     try:
         if check_mode:
             ip_allocated = True
-            new_eip = 'eipalloc-1234567'
+            random_numbers = (
+                ''.join(str(x) for x in random.sample(range(0, 9), 7))
+            )
+            new_eip = 'eipalloc-{0}'.format(random_numbers)
         else:
             new_eip = client.allocate_address(**params)['AllocationId']
             ip_allocated = True
@@ -685,6 +713,7 @@ def create(client, subnet_id, allocation_id, client_token=None,
             result = DRY_RUN_GATEWAY_UNCONVERTED[0]
             result['CreateTime'] = datetime.datetime.utcnow()
 
+        success = True
         changed = True
         create_time = result['CreateTime'].replace(tzinfo=None)
         if token_provided and (request_time > create_time):
@@ -708,6 +737,8 @@ def create(client, subnet_id, allocation_id, client_token=None,
             )
         else:
             err_msg = str(e)
+            success = False
+            changed = False
 
     return success, changed, err_msg, result
 
@@ -790,11 +821,15 @@ def pre_create(client, subnet_id, allocation_id=None, eip_address=None,
 
     elif eip_address or allocation_id:
         if eip_address and not allocation_id:
-            allocation_id, _ = (
+            allocation_id, err_msg = (
                 get_eip_allocation_id_by_address(
                     client, eip_address, check_mode=check_mode
                 )
             )
+            if not allocation_id:
+                success = False
+                changed = False
+                return success, changed, err_msg, dict()
 
         existing_gateways, allocation_id_exists = (
             gateway_in_subnet_exists(
