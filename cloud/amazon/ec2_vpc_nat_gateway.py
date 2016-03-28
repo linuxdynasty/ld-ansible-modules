@@ -552,7 +552,7 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
             if dry_run_eip == eip_address:
                 allocation = DRY_RUN_ALLOCATION_UNCONVERTED['Addresses'][0]
             else:
-				allocation = None
+                allocation = None
         if allocation:
             if allocation.get('Domain') != 'vpc':
                 err_msg = (
