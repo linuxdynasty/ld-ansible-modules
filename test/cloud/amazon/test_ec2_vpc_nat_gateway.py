@@ -56,7 +56,6 @@ def run(play):
                 stdout_callback='default',
             )
         results = tqm.run(play)
-        print tqm._stats.__dict__
     finally:
         if tqm is not None:
             tqm.cleanup()
