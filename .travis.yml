@@ -17,6 +17,7 @@ install:
 script:
   - python2.7 -m compileall -fq .
   - ansible-validate-modules --exclude 'test*' ./
+  - ansible-playbook --connection=local -i '127.0.0.1' -M cloud/amazon -vvvv test/integrations/site.yml -C
   - nosetests --with-coverage
 
 after_success:  
