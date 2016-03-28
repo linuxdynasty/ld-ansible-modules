@@ -254,88 +254,37 @@ def convert_to_lower(data):
     """Convert all uppercase keys in dict with lowercase_
     Args:
         data (dict): Dictionary with keys that have upper cases in them
-            Example.. NatGatewayAddresses == nat_gateway_addresses
+            Example.. FooBar == foo_bar
             if a val is of type datetime.datetime, it will be converted to
             the ISO 8601
 
     Basic Usage:
-        >>> test = {'NatGatewaysAddresses': []}
+        >>> test = {'FooBar': []}
         >>> test = convert_to_lower(test)
         {
-            'nat_gateways_addresses': []
+            'foo_bar': []
         }
 
     Returns:
         Dictionary
     """
     results = dict()
-    for key, val in data.items():
-        key = re.sub('([A-Z]{1})', r'_\1', key).lower()[1:]
-        if isinstance(val, datetime.datetime):
-            results[key] = val.isoformat()
-        else:
-            results[key] = val
-    return results
-
-def formatted_nat_gw_output(data):
-    """Format the results of NatGateways into lowercase with underscores.
-    Args:
-        data (list): List of dictionaries with keys that have upper cases in
-            them. Example.. NatGatewayAddresses == nat_gateway_addresses
-            if a val is of type datetime.datetime, it will be converted to
-            the ISO 8601
-
-    Basic Usage:
-        >>> test = [
-            {
-                'VpcId': 'vpc-12345',
-                'State': 'available',
-                'NatGatewayId': 'nat-0b2f9f2ac3f51a653',
-                'SubnetId': 'subnet-12345',
-                'NatGatewayAddresses': [
-                    {
-                        'PublicIp': '52.52.52.52',
-                        'NetworkInterfaceId': 'eni-12345',
-                        'AllocationId': 'eipalloc-12345',
-                        'PrivateIp': '10.0.0.100'
-                    }
-                ],
-                'CreateTime': datetime.datetime(2016, 3, 5, 5, 19, 20, 282000, tzinfo=tzutc())
-            }
-        ]
-        >>> test = formatted_nat_gw_output(test)
-            [
-                {
-                    'nat_gateway_id': 'nat-0b2f9f2ac3f51a653',
-                    'subnet_id': 'subnet-12345',
-                    'nat_gateway_addresses': [
-                        {
-                            'public_ip': '52.52.52.52',
-                            'network_interface_id': 'eni-12345',
-                            'private_ip': '10.0.0.100',
-                            'allocation_id': 'eipalloc-12345'
-                        }
-                    ],
-                    'state': 'available',
-                    'create_time': '2016-03-05T05:19:20.282000+00:00',
-                    'vpc_id': 'vpc-12345'
-                }
-            ]
-
-    Returns:
-        List
-    """
-    results = list()
-    for gw in data:
-        output = dict()
-        ng_addresses = gw.pop('NatGatewayAddresses')
-        output = convert_to_lower(gw)
-        output['nat_gateway_addresses'] = []
-        for address in ng_addresses:
-            gw_data = convert_to_lower(address)
-            output['nat_gateway_addresses'].append(gw_data)
-        results.append(output)
-
+    if isinstance(data, dict):
+        for key, val in data.items():
+            key = re.sub(r'(([A-Z]{1,3}){1})', r'_\1', key).lower()
+            if key[0] == '_':
+                key = key[1:]
+            if isinstance(val, datetime.datetime):
+                results[key] = val.isoformat()
+            elif isinstance(val, dict):
+                results[key] = convert_to_lower(val)
+            elif isinstance(val, list):
+                converted = list()
+                for item in val:
+                    converted.append(convert_to_lower(item))
+                results[key] = converted
+            else:
+                results[key] = val
     return results
 
 def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
@@ -391,16 +340,17 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
     try:
         if not check_mode:
             gateways = client.describe_nat_gateways(**params)['NatGateways']
-            existing_gateways = formatted_nat_gw_output(gateways)
+            existing_gateways = convert_to_lower(gateways)
             gateways_retrieved = True
         else:
-            existing_gateways = DRY_RUN_GATEWAYS
+            gateways_retrieved = True
+            existing_gateways = []
             if nat_gateway_id:
-                if existing_gateways[0]['nat_gateway_id'] == nat_gateway_id:
-                    gateways_retrieved = True
-            if subnet_id:
-                if existing_gateways[0]['subnet_id'] == subnet_id:
-                    gateways_retrieved = True
+                if DRY_RUN_GATEWAYS[0]['nat_gateway_id'] == nat_gateway_id:
+                    existing_gateways = DRY_RUN_GATEWAYS
+            elif subnet_id:
+                if DRY_RUN_GATEWAYS[0]['subnet_id'] == subnet_id:
+                    existing_gateways = DRY_RUN_GATEWAYS
             err_msg = '{0} Retrieving gateways'.format(DRY_RUN_MSGS)
 
     except botocore.exceptions.ClientError, e:
@@ -461,7 +411,6 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                     check_mode=check_mode
                 )
             )
-
             if gws_retrieved and nat_gateway:
                 nat_gateway = nat_gateway[0]
                 if check_mode:

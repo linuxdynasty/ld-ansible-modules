@@ -262,6 +262,76 @@ class AnsibleVpcNatGatewayTasks(unittest.TestCase):
         self.failUnless(tqm._stats.ok['localhost'] == 2)
         self.assertTrue(tqm._stats.changed.has_key('localhost'))
 
+class AnsibleEc2VpcNatGatewayFunctions(unittest.TestCase):
+
+    def test_convert_to_lower(self):
+        example = ng.DRY_RUN_GATEWAY_UNCONVERTED
+        converted_example = ng.convert_to_lower(example[0])
+        keys = converted_example.keys()
+        keys.sort()
+        for i in range(len(keys)):
+            if i == 0:
+                self.assertEqual(keys[i], 'create_time')
+            if i == 1:
+                self.assertEqual(keys[i], 'nat_gateway_addresses')
+                gw_addresses_keys = converted_example[keys[i]][0].keys()
+                gw_addresses_keys.sort()
+                for j in range(len(gw_addresses_keys)):
+                    if j == 0:
+                        self.assertEqual(gw_addresses_keys[j], 'allocation_id')
+                    if j == 1:
+                        self.assertEqual(gw_addresses_keys[j], 'network_interface_id')
+                    if j == 2:
+                        self.assertEqual(gw_addresses_keys[j], 'private_ip')
+                    if j == 3:
+                        self.assertEqual(gw_addresses_keys[j], 'public_ip')
+            if i == 2:
+                self.assertEqual(keys[i], 'nat_gateway_id')
+            if i == 3:
+                self.assertEqual(keys[i], 'state')
+            if i == 4:
+                self.assertEqual(keys[i], 'subnet_id')
+            if i == 5:
+                self.assertEqual(keys[i], 'vpc_id')
+
+    def test_get_nat_gateways(self):
+        client = boto3.client('ec2', region_name='us-west-2')
+        success, err_msg, stream = (
+            ng.get_nat_gateways(client, 'subnet-123456789', check_mode=True)
+        )
+        should_return = ng.DRY_RUN_GATEWAYS
+        self.assertTrue(success)
+        self.assertEqual(stream, should_return)
+
+    def test_get_nat_gateways_no_gateways_found(self):
+        client = boto3.client('ec2', region_name='us-west-2')
+        success, err_msg, stream = (
+            ng.get_nat_gateways(client, 'subnet-1234567', check_mode=True)
+        )
+        self.assertTrue(success)
+        self.assertEqual(stream, [])
+
+    def test_wait_for_status(self):
+        client = boto3.client('ec2', region_name='us-west-2')
+        success, err_msg, gws = (
+            ng.wait_for_status(
+                client, 5, 'nat-123456789', 'available', check_mode=True
+            )
+        )
+        should_return = ng.DRY_RUN_GATEWAYS[0]
+        self.assertTrue(success)
+        self.assertEqual(gws, should_return)
+
+    def test_wait_for_status_to_timeout(self):
+        client = boto3.client('ec2', region_name='us-west-2')
+        success, err_msg, gws = (
+            ng.wait_for_status(
+                client, 2, 'nat-12345678', 'available', check_mode=True
+            )
+        )
+        self.assertFalse(success)
+        self.assertEqual(gws, [])
+
 
 def main():
     unittest.main()
