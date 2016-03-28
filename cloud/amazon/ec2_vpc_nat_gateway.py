@@ -522,7 +522,18 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
         err_msg = '{0} Get EIP Address by allocation id'.format(DRY_RUN_MSGS)
         return "eipalloc-1234567", err_msg
     try:
-        allocation = client.describe_addresses(**params)['Addresses'][0]
+        if not check_mode:
+            allocations = client.describe_addresses(**params)['Addresses']
+            if len(allocations) == 1:
+                allocation = allocations[0]
+            else:
+                allocation = None
+        else:
+            dry_run alloid = (
+                DRY_RUN_GATEWAYS[0]['nat_gateway_addresses'][0]['allocation_id']
+            )
+            if dry_run alloid == eip_address:
+                allocation DRY_RUN_GATEWAYS[0]
         if not allocation.get('Domain') != 'vpc':
             err_msg = (
                 "EIP provided is a non-VPC EIP, please allocate a VPC scoped EIP"
