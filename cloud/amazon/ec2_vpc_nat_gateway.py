@@ -352,7 +352,10 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
     try:
         if not check_mode:
             gateways = client.describe_nat_gateways(**params)['NatGateways']
-            existing_gateways = convert_to_lower(gateways)
+            existing_gateways = list()
+            if gateways:
+                for gw in gateways:
+                    existing_gateways.append(convert_to_lower(gw))
             gateways_retrieved = True
         else:
             gateways_retrieved = True
@@ -441,8 +444,6 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                         err_msg = nat_gateway.get('FailureMessage')
                         status_achieved = False
                         break
-                    else:
-                        continue
 
             else:
                 time.sleep(polling_increment_secs)
