@@ -1,0 +1,60 @@
+- name: Launching NAT Gateway and allocate a new eip, but not if one already exists
+  ec2_vpc_nat_gateway:
+    region: us-west-2
+    state: present
+    subnet_id: subnet-123456789
+    if_exist_do_not_create: yes
+    wait: yes
+    wait_timeout: 10
+  register: nat
+
+- debug:
+    var: nat
+- fail:
+    msg: "Changed is true"
+  when: '"{{ nat["changed"] }}" == "True"'
+
+- name: Launching NAT Gateway and allocate a new eip even if one already exists in the subnet
+  ec2_vpc_nat_gateway:
+    region: us-west-2
+    state: present
+    subnet_id: subnet-123456789
+    wait: yes
+    wait_timeout: 10
+  register: new_nat
+
+- debug:
+    var: new_nat
+- fail:
+    msg: "Changed is false"
+  when: '"{{ new_nat["changed"] }}" == "False"'
+
+- name: Launching NAT Gateway with allocation id
+  ec2_vpc_nat_gateway:
+    allocation_id: eipalloc-123456789
+    region: us-west-2
+    state: present
+    subnet_id: subnet-123456789
+    wait: yes
+    wait_timeout: 10
+  register: nat_with_eipalloc
+
+- debug:
+    var: nat_with_eipalloc
+- fail:
+    msg: 'Failed, the eipalloc-123456789 != {{ nat_with_eipalloc["nat_gateway_addresses"][0]["allocation_id"]  }}'
+  when: '"{{ nat_with_eipalloc["nat_gateway_addresses"][0]["allocation_id"] }}" != "eipalloc-123456789"'
+
+- name: Delete the 1st nat gateway and do not wait for it to finish
+  ec2_vpc_nat_gateway:
+    region: us-west-2
+    nat_gateway_id: "{{ nat.nat_gateway_id }}"
+    state: absent
+
+- name: Delete the previous nat gateway
+  ec2_vpc_nat_gateway:
+    region: us-west-2
+    nat_gateway_id: "{{ new_nat.nat_gateway_id }}"
+    state: absent
+    wait: yes
+    wait_timeout: 10
