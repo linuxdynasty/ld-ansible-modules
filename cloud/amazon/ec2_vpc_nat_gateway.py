@@ -68,7 +68,7 @@ options:
     description:
       - Wait for operation to complete before returning
     required: false
-    default: true
+    default: false
   wait_timeout:
     description:
       - How many seconds to wait for an operation to complete before timing out
@@ -300,7 +300,7 @@ def convert_to_lower(data):
     return results
 
 def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
-                     check_mode=False):
+                     states=None, check_mode=False):
     """Retrieve a list of NAT Gateways
     Args:
         client (botocore.client.EC2): Boto3 client
@@ -308,6 +308,8 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
     Kwargs:
         subnet_id (str): The subnet_id the nat resides in.
         nat_gateway_id (str): The Amazon nat id.
+        states (list): States available (pending, failed, available, deleting, and deleted)
+            default=None
 
     Basic Usage:
         >>> client = boto3.client('ec2')
@@ -339,6 +341,8 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
     params = dict()
     err_msg = ""
     gateways_retrieved = False
+    if not states:
+        states = ['available', 'pending']
     if nat_gateway_id:
         params['NatGatewayIds'] = [nat_gateway_id]
     else:
@@ -346,6 +350,10 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
             {
                 'Name': 'subnet-id',
                 'Values': [subnet_id]
+            },
+            {
+                'Name': 'state',
+                'Values': states
             }
         ]
 
@@ -416,6 +424,7 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
     wait_timeout = time.time() + wait_timeout
     status_achieved = False
     nat_gateway = list()
+    states = ['pending', 'failed', 'available', 'deleting', 'deleted']
     err_msg = ""
 
     while wait_timeout > time.time():
@@ -423,7 +432,7 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
             gws_retrieved, err_msg, nat_gateway = (
                 get_nat_gateways(
                     client, nat_gateway_id=nat_gateway_id,
-                    check_mode=check_mode
+                    states=states, check_mode=check_mode
                 )
             )
             if gws_retrieved and nat_gateway:
@@ -440,8 +449,8 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                     break
 
                 elif nat_gateway.get('state') == 'pending':
-                    if nat_gateway.has_key('FailureMessage'):
-                        err_msg = nat_gateway.get('FailureMessage')
+                    if nat_gateway.has_key('failure_message'):
+                        err_msg = nat_gateway.get('failure_message')
                         status_achieved = False
                         break
 
@@ -498,20 +507,22 @@ def gateway_in_subnet_exists(client, subnet_id, allocation_id=None,
     """
     allocation_id_exists = False
     gateways = []
+    states = ['available', 'pending']
     gws_retrieved, _, gws = (
-        get_nat_gateways(client, subnet_id, check_mode=check_mode)
+        get_nat_gateways(
+            client, subnet_id, states=states, check_mode=check_mode
+        )
     )
     if not gws_retrieved:
         return gateways, allocation_id_exists
     for gw in gws:
         for address in gw['nat_gateway_addresses']:
-            if gw.get('state') == 'available' or gw.get('state') == 'pending':
-                if allocation_id:
-                    if address.get('allocation_id') == allocation_id:
-                        allocation_id_exists = True
-                        gateways.append(gw)
-                else:
+            if allocation_id:
+                if address.get('allocation_id') == allocation_id:
+                    allocation_id_exists = True
                     gateways.append(gw)
+            else:
+                gateways.append(gw)
 
     return gateways, allocation_id_exists
 
@@ -591,6 +602,7 @@ def allocate_eip_address(client, check_mode=False):
     """
     ip_allocated = False
     new_eip = None
+    err_msg = ''
     params = {
         'Domain': 'vpc',
     }
@@ -604,11 +616,12 @@ def allocate_eip_address(client, check_mode=False):
         else:
             new_eip = client.allocate_address(**params)['AllocationId']
             ip_allocated = True
+        err_msg = 'eipalloc id {0} created'.format(new_eip)
 
     except botocore.exceptions.ClientError, e:
-        pass
+        err_msg = str(e)
 
-    return ip_allocated, new_eip
+    return ip_allocated, err_msg, new_eip
 
 def release_address(client, allocation_id, check_mode=False):
     """Release an EIP from your EIP Pool
@@ -809,6 +822,7 @@ def pre_create(client, subnet_id, allocation_id=None, eip_address=None,
         existing_gateways, allocation_id_exists = (
             gateway_in_subnet_exists(client, subnet_id, check_mode=check_mode)
         )
+
         if len(existing_gateways) > 0 and if_exist_do_not_create:
             success = True
             changed = False
@@ -821,9 +835,11 @@ def pre_create(client, subnet_id, allocation_id=None, eip_address=None,
             )
             return success, changed, err_msg, results
         else:
-            _, allocation_id = (
+            success, err_msg, allocation_id = (
                 allocate_eip_address(client, check_mode=check_mode)
             )
+            if not success:
+                return success, 'False', err_msg, dict()
 
     elif eip_address or allocation_id:
         if eip_address and not allocation_id:
@@ -908,10 +924,12 @@ def remove(client, nat_gateway_id, wait=False, wait_timeout=0,
     changed = False
     err_msg = ""
     results = list()
+    states = ['pending', 'available' ]
     try:
         exist, _, gw = (
             get_nat_gateways(
-                client, nat_gateway_id=nat_gateway_id, check_mode=check_mode
+                client, nat_gateway_id=nat_gateway_id,
+                states=states, check_mode=check_mode
             )
         )
         if exist and len(gw) == 1:
@@ -962,7 +980,7 @@ def main():
         allocation_id=dict(type='str'),
         if_exist_do_not_create=dict(type='bool', default=False),
         state=dict(default='present', choices=['present', 'absent']),
-        wait=dict(type='bool', default=True),
+        wait=dict(type='bool', default=False),
         wait_timeout=dict(type='int', default=320, required=False),
         release_eip=dict(type='bool', default=False),
         nat_gateway_id=dict(type='str'),

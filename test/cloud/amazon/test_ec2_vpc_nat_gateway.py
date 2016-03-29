@@ -383,7 +383,7 @@ class AnsibleEc2VpcNatGatewayFunctions(unittest.TestCase):
 
     def test_allocate_eip_address(self):
         client = boto3.client('ec2', region_name=aws_region)
-        success, eip_id = (
+        success, err_msg, eip_id = (
             ng.allocate_eip_address(
                 client, check_mode=True
             )
