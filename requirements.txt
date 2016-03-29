@@ -1,6 +1,7 @@
 boto==2.39.0
 boto3==1.3.0
 botocore==1.4.7
+codecov==1.6.3
 coverage==4.0.3
 coveralls==1.1
 nose==1.3.7
