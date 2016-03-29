@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/linuxdynasty/ld-ansible-modules.svg?branch=master)](https://travis-ci.org/linuxdynasty/ld-ansible-modules)
 [![Coverage Status](https://coveralls.io/repos/github/linuxdynasty/ld-ansible-modules/badge.svg?branch=master)](https://coveralls.io/github/linuxdynasty/ld-ansible-modules?branch=master)
+[![codecov.io](https://codecov.io/github/linuxdynasty/ld-ansible-modules/coverage.svg?branch=master)](https://codecov.io/github/linuxdynasty/ld-ansible-modules?branch=master)
 
 # Ansible Version
 
