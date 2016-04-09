@@ -205,7 +205,7 @@ nat_gateway_addresses:
 try:
     import botocore
     import boto3
-    imoprt boto
+    import boto
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
