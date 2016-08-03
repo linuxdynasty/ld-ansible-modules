@@ -422,18 +422,18 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
         ]
 
     Returns:
-        Tuple (bool, str, list)
+        Tuple (bool, str, dict)
     """
     polling_increment_secs = 5
     wait_timeout = time.time() + wait_timeout
     status_achieved = False
-    nat_gateway = list()
+    nat_gateway = dict()
     states = ['pending', 'failed', 'available', 'deleting', 'deleted']
     err_msg = ""
 
     while wait_timeout > time.time():
         try:
-            gws_retrieved, err_msg, nat_gateway = (
+            gws_retrieved, err_msg, nat_gateways = (
                 get_nat_gateways(
                     client, nat_gateway_id=nat_gateway_id,
                     states=states, check_mode=check_mode
@@ -453,7 +453,7 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                     break
 
                 elif nat_gateway.get('state') == 'pending':
-                    if nat_gateway.has_key('failure_message'):
+                    if 'failure_message' in nat_gateway:
                         err_msg = nat_gateway.get('failure_message')
                         status_achieved = False
                         break
