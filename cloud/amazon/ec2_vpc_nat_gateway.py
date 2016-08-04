@@ -754,9 +754,6 @@ def create(client, subnet_id, allocation_id, client_token=None,
                 err_msg = (
                     'NAT gateway {0} created'.format(result['nat_gateway_id'])
                 )
-            if check_mode:
-                result['nat_gateway_addresses'][0]['allocation_id'] = allocation_id
-                result['subnet_id'] = subnet_id
 
     except botocore.exceptions.ClientError as e:
         if "IdempotentParameterMismatch" in e.message:
