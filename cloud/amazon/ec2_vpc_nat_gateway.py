@@ -439,8 +439,8 @@ def wait_for_status(client, wait_timeout, nat_gateway_id, status,
                     states=states, check_mode=check_mode
                 )
             )
-            if gws_retrieved and nat_gateway:
-                nat_gateway = nat_gateway[0]
+            if gws_retrieved and nat_gateways:
+                nat_gateway = nat_gateways[0]
                 if check_mode:
                     nat_gateway['state'] = status
 
