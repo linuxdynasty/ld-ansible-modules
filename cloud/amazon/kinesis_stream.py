@@ -147,7 +147,6 @@ tags:
 '''
 
 try:
-    import boto
     import botocore
     import boto3
     HAS_BOTO3 = True
