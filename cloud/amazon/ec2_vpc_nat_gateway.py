@@ -160,6 +160,8 @@ EXAMPLES = '''
     state: absent
     nat_gateway_id: nat-12345678
     release_eip: yes
+    wait: yes
+    wait_timeout: 300
     region: ap-southeast-2
 '''
 
@@ -649,11 +651,11 @@ def release_address(client, allocation_id, check_mode=False):
         True
 
     Returns:
-        Boolean
+        Boolean, string
     """
     err_msg = ''
     if check_mode:
-        return True
+        return True, ''
 
     ip_released = False
     params = {
@@ -975,13 +977,13 @@ def remove(client, nat_gateway_id, wait=False, wait_timeout=0,
         err_msg = str(e)
 
     if release_eip:
-        eip_released, err = (
-            release_address(client, allocation_id, check_mode=check_mode)
+        eip_released, eip_err = (
+            release_address(client, allocation_id, check_mode)
         )
         if not eip_released:
             err_msg = (
                 "{0}: Failed to release EIP {1}: {2}"
-                .format(err_msg, allocation_id, err)
+                .format(err_msg, allocation_id, eip_err)
             )
             success = False
 
