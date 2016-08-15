@@ -204,6 +204,13 @@ nat_gateway_addresses:
       }
   ]
 '''
+import datetime
+from dateutil.tz import tzutc
+import random
+import re
+import time
+
+from ansible.module_utils.ec2 import AWSRetry
 
 try:
     import botocore
@@ -211,13 +218,6 @@ try:
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
-
-import datetime
-import random
-import re
-import time
-
-from dateutil.tz import tzutc
 
 DRY_RUN_GATEWAYS = [
     {
@@ -306,6 +306,36 @@ def convert_to_lower(data):
     return results
 
 
+@AWSRetry.backoff()
+def describe_nat_gateways(client, params):
+    return client.describe_nat_gateways(**params)['NatGateways']
+
+
+@AWSRetry.backoff()
+def allocate_address(client, params):
+    return client.allocate_address(**params)['AllocationId']
+
+
+@AWSRetry.backoff()
+def release_eip_address(client, params):
+    return client.release_address(**params)
+
+
+@AWSRetry.backoff()
+def delete_nat_gateway(client, params):
+    return client.delete_nat_gateway(**params)
+
+
+@AWSRetry.backoff()
+def describe_addresses(client, params):
+    return client.describe_addresses(**params)['Addresses']
+
+
+@AWSRetry.backoff()
+def create_nat_gateway(client, params):
+    return client.create_nat_gateway(**params)["NatGateway"]
+
+
 def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
                      states=None, check_mode=False):
     """Retrieve a list of NAT Gateways
@@ -367,7 +397,7 @@ def get_nat_gateways(client, subnet_id=None, nat_gateway_id=None,
 
     try:
         if not check_mode:
-            gateways = client.describe_nat_gateways(**params)['NatGateways']
+            gateways = describe_nat_gateways(client, params)
             if gateways:
                 for gw in gateways:
                     existing_gateways.append(convert_to_lower(gw))
@@ -561,7 +591,7 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
     err_msg = ""
     try:
         if not check_mode:
-            allocations = client.describe_addresses(**params)['Addresses']
+            allocations = describe_addresses(params)
             if len(allocations) == 1:
                 allocation = allocations[0]
             else:
@@ -624,7 +654,7 @@ def allocate_eip_address(client, check_mode=False):
             )
             new_eip = 'eipalloc-{0}'.format(random_numbers)
         else:
-            new_eip = client.allocate_address(**params)['AllocationId']
+            new_eip = allocate_address(client, params)
             ip_allocated = True
         err_msg = 'eipalloc id {0} created'.format(new_eip)
 
@@ -662,7 +692,7 @@ def release_address(client, allocation_id, check_mode=False):
         'AllocationId': allocation_id,
     }
     try:
-        client.release_address(**params)
+        release_eip_address(client, params)
         ip_released = True
     except botocore.exceptions.ClientError as e:
         err_msg = str(e)
@@ -735,7 +765,7 @@ def create(client, subnet_id, allocation_id, client_token=None,
 
     try:
         if not check_mode:
-            result = client.create_nat_gateway(**params)["NatGateway"]
+            result = create_nat_gateway(client, params)
         else:
             result = DRY_RUN_GATEWAY_UNCONVERTED[0]
             result['CreateTime'] = datetime.datetime.utcnow()
@@ -948,7 +978,7 @@ def remove(client, nat_gateway_id, wait=False, wait_timeout=0,
         if exist and len(gw) == 1:
             results = gw[0]
             if not check_mode:
-                client.delete_nat_gateway(**params)
+                delete_nat_gateway(params)
 
             allocation_id = (
                 results['nat_gateway_addresses'][0]['allocation_id']
