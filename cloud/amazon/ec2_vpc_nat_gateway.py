@@ -210,7 +210,7 @@ import random
 import re
 import time
 
-from ansible.module_utils.ec2 import AWSRetry
+import ansible.module_utils.ec2 as ec2
 
 try:
     import botocore
@@ -306,32 +306,32 @@ def convert_to_lower(data):
     return results
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def describe_nat_gateways(client, params):
     return client.describe_nat_gateways(**params)['NatGateways']
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def allocate_address(client, params):
     return client.allocate_address(**params)['AllocationId']
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def release_eip_address(client, params):
     return client.release_address(**params)
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def delete_nat_gateway(client, params):
     return client.delete_nat_gateway(**params)
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def describe_addresses(client, params):
     return client.describe_addresses(**params)['Addresses']
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def create_nat_gateway(client, params):
     return client.create_nat_gateway(**params)["NatGateway"]
 
@@ -591,7 +591,7 @@ def get_eip_allocation_id_by_address(client, eip_address, check_mode=False):
     err_msg = ""
     try:
         if not check_mode:
-            allocations = describe_addresses(params)
+            allocations = describe_addresses(client, params)
             if len(allocations) == 1:
                 allocation = allocations[0]
             else:
@@ -978,7 +978,7 @@ def remove(client, nat_gateway_id, wait=False, wait_timeout=0,
         if exist and len(gw) == 1:
             results = gw[0]
             if not check_mode:
-                delete_nat_gateway(params)
+                delete_nat_gateway(client, params)
 
             allocation_id = (
                 results['nat_gateway_addresses'][0]['allocation_id']
