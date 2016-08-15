@@ -146,7 +146,7 @@ in_use_by:
 import datetime
 from dateutil.tz import tzlocal
 
-from ansible.module_utils.ec2 import AWSRetry
+import ansible.module_utils.ec2 as ec2
 
 try:
     import boto3
@@ -200,7 +200,7 @@ BOTO_DESCRIBE_ERROR = {
 }
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def describe_certificate(client, arn, check_mode=False):
     """ Wrapper function for describe_certificate
     Args:
@@ -268,7 +268,7 @@ def describe_certificate(client, arn, check_mode=False):
     return (success, err_msg, results)
 
 
-@AWSRetry.backoff()
+@ec2.AWSRetry.backoff()
 def list_certificates(client, check_mode=False):
     """ Wrapper function for list_certificate
     Args:
