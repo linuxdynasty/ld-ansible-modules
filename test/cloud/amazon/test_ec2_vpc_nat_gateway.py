@@ -3,7 +3,7 @@
 import boto3
 import unittest
 
-import cloud.amazon.ec2_vpc_nat_gateway as ng
+import ec2_vpc_nat_gateway as ng
 
 aws_region = 'us-west-2'
 

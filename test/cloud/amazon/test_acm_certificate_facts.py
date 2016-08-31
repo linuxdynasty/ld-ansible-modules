@@ -3,7 +3,7 @@
 import boto3
 import unittest
 
-import cloud.amazon.acm_certificate_facts as acf
+import acm_certificate_facts as acf
 
 
 CHECK_MODE = True

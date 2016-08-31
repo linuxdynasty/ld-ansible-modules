@@ -10,7 +10,7 @@ from ansible.inventory import Inventory
 from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 
-import cloud.amazon.kinesis_stream as kinesis_stream
+import kinesis_stream as kinesis_stream
 
 Options = (
     namedtuple(
